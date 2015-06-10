@@ -1,0 +1,70 @@
+<?xml version="1.0"?>
+<!-- containers\spark\myComponents\MyLoginForm.mxml -->
+<s:TitleWindow xmlns:fx="http://ns.adobe.com/mxml/2009"
+			   xmlns:mx="library://ns.adobe.com/flex/mx" 
+			   xmlns:s="library://ns.adobe.com/flex/spark"
+			   close="handleCloseEvent();">
+	<s:layout>
+		<s:VerticalLayout/>
+	</s:layout>
+	
+	<fx:Script>
+		<![CDATA[
+			import edu.isi.bmkeg.digitalLibrary.events.ClosePopupEvent;
+			import edu.isi.bmkeg.digitalLibrary.model.citations.Corpus;
+			import edu.isi.bmkeg.digitalLibrary.rl.events.*;
+			
+			public var vpdmfId:Number;
+
+			[Bindable]
+			public var cName:String = "<Name>";
+
+			[Bindable]
+			public var regexCode:String = "<Regex Code>";
+
+			[Bindable]
+			public var desc:String = "<Description>";
+
+			
+			// Handle the close button and Cancel button.
+			private function handleCloseEvent():void {
+				this.dispatchEvent(new ClosePopupEvent(this));
+			}            
+			
+			// Handle the OK button.
+			private function clickOk():void {
+
+				var c:Corpus = new Corpus();
+				c.name = this.cNameControl.text;
+				c.description = this.descControl.text;
+				c.regex = this.regexCodeControl.text;
+				c.vpdmfId = this.vpdmfId;
+				
+				if( isNaN(vpdmfId) ) {
+					this.dispatchEvent( new InsertArticleCorpusEvent(c) );
+				} else {
+					this.dispatchEvent( new UpdateArticleCorpusEvent(c) );					
+				}
+				this.dispatchEvent(new ClosePopupEvent(this));
+			}
+		]]>
+	</fx:Script>
+	
+	<s:Form>
+		<s:FormItem label="Name">
+			<s:TextInput id="cNameControl" text="{cName}" width="100%"/>
+		</s:FormItem> 
+		<s:FormItem label="Regex Code">
+			<s:TextInput id="regexCodeControl" text="{regexCode}" width="100%"/>
+		</s:FormItem> 		
+		<s:FormItem label="Description">
+			<s:TextArea id="descControl" text="{desc}" heightInLines="3" width="100%"/>
+		</s:FormItem> 
+	</s:Form>
+	<s:HGroup> 
+		<s:Button label="OK"
+				  click="clickOk();" /> 
+		<s:Button label="Cancel"
+				  click="handleCloseEvent();"/> 
+	</s:HGroup> 
+</s:TitleWindow>

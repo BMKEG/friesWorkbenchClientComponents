@@ -1,0 +1,282 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009"
+		 xmlns:s="library://ns.adobe.com/flex/spark"
+		 xmlns:mx="library://ns.adobe.com/flex/mx" 
+		 xmlns:view="edu.isi.bmkeg.digitalLibraryModule.view.*"
+		 xmlns:hc="com.hillelcoren.components.*"
+		 xmlns:classes="com.hillelcoren.components.autoComplete.classes.*"
+		 width="100%"
+		 height="100%"
+		 resize="group1_resizeHandler(event)">	
+	
+	<s:layout>
+		<s:VerticalLayout/>
+	</s:layout>
+	
+	<s:states>
+		<s:State name="showPages"/>	
+		<s:State name="showText"/>	
+		<s:State name="showFragments"/>	
+	</s:states>
+	
+	<fx:Style>
+		.facebook {
+			over-skin: ClassReference("edu.isi.bmkeg.digitalLibraryModule.view.TermSkin");
+			up-skin: ClassReference("edu.isi.bmkeg.digitalLibraryModule.view.TermSkin");
+			down-skin: ClassReference("edu.isi.bmkeg.digitalLibraryModule.view.TermSkin");
+			selected-over-skin : ClassReference("edu.isi.bmkeg.digitalLibraryModule.view.TermSkin");
+			selected-up-skin: ClassReference("edu.isi.bmkeg.digitalLibraryModule.view.TermSkin");
+			selected-down-skin : ClassReference("edu.isi.bmkeg.digitalLibraryModule.view.TermSkin");
+			padding-top: 0;
+			padding-bottom: 0;
+			text-selected-color: #FFFFFF;
+			padding-left: 8;
+			padding-right: 8;
+			font-weight: normal;              
+		}
+	</fx:Style>
+		
+	<fx:Declarations>
+		<fx:Component id="dropDownTermRenderer">
+			<view:TermItemRenderer selectedItems="{ outerDocument.autoComplete.selectedItems }" />
+		</fx:Component>
+		<s:RadioButtonGroup id="documentView" 
+							itemClick="buttonsChangeHandler(event);" 
+							selectedValue="PDF"/>
+	</fx:Declarations>
+
+	<fx:Script>
+		<![CDATA[
+			import edu.isi.bmkeg.digitalLibrary.events.*;
+			import edu.isi.bmkeg.ftd.model.*;
+			import edu.isi.bmkeg.terminology.model.qo.Term_qo;
+			import edu.isi.bmkeg.terminology.rl.events.ListTermEvent;
+			import edu.isi.bmkeg.utils.ColorPalette;
+			import edu.isi.bmkeg.vpdmf.model.instances.LightViewInstance;
+			
+			import mx.collections.*;
+			import mx.collections.ArrayCollection;
+			import mx.controls.SWFLoader;
+			import mx.events.FlexEvent;
+			import mx.events.ItemClickEvent;
+			import mx.events.ResizeEvent;
+			
+			import spark.events.IndexChangeEvent;
+			import spark.events.TextOperationEvent;
+
+			public var ftd:FTD;
+			
+			[Bindable]
+			public var bitmaps:ArrayCollection = new ArrayCollection;
+
+			[Bindable]
+			public var allText:String;
+			
+			[Bindable]
+			public var ontologies:ArrayCollection = new ArrayCollection;
+			
+			[Bindable] 
+			public var frgType:String = "frg";
+
+			[Bindable]
+			public var terms:ArrayCollection;
+
+			[Bindable] 
+			public var frgCode:String = "fragment";
+			
+			[Bindable] 
+			public var frgNumber:String = "-";
+
+			[Bindable] 
+			public var xmlRoot:XML = <root/>;
+			
+			public var colorLookup:Object = new Object;
+			
+			private static var swfClass:Class;
+						
+			protected function buttonsChangeHandler(event:ItemClickEvent):void {
+				var v:String = String(documentView.selectedValue);
+				
+				if( v == "PDF" ) {
+					currentState = "showPages";
+				} else if( v == "Text" ) {
+					currentState = "showText";					
+					this.dispatchEvent( 
+						new RetrievePmcHtmlEvent()
+					);
+				} else {
+					currentState = "showFragments";					
+					
+				}
+				
+			}
+			
+			protected function frgTreeLabelFunction(item:Object):String
+			{
+				var fh:FTDFragment = FTDFragment(item);
+				var frgText:String = "";
+				
+				for each(var f:FTDFragmentBlock in fh.annotations) {
+					if(frgText.length == 0)
+						frgText += " " + f.text;
+					else if( frgText.charAt(frgText.length-1) == "-" )						
+						frgText = frgText.substr(0, frgText.length-2) + frgText;
+					else  
+						frgText += " " + f.text;
+					
+				}
+				
+				return frgText;
+				
+			}
+			
+			private function openTree():void {
+				var nodeList:XMLListCollection = 
+					frgList.dataProvider as XMLListCollection;
+				var node:XMLList = nodeList.source;
+				for each (var n:XML in node){
+					if( n.children() != null ) {
+						frgList.expandItem(n,true,false);
+						node = n.children();
+					} else {
+						break;
+					}
+				}
+			}
+			
+			private function handleAutoCompleteChange():void
+			{
+				var term:Object = autoComplete.selectedItem;
+				
+				if (term != null && term.hasOwnProperty( "colorId" )) {
+					this.frgCode = term["code"];
+					this.dispatchEvent( new ChangeFragmentCodeInViewEvent(this.frgCode) );
+				} else { 
+					this.dispatchEvent( new ChangeFragmentCodeInViewEvent("") );					
+				}
+				
+			}
+			
+			/**
+			 * 
+			 * Check to see if the fragment text is a number
+			 */
+			protected function frgNumberInput_changeHandler(event:TextOperationEvent):void
+			{
+				
+			}
+			
+			protected function dumpToBratButton_clickHandler(event:MouseEvent):void
+			{
+				this.dispatchEvent(new DumpFragmentsToBratEvent(1.0));				
+			}
+			
+			protected function ontologyCombo_changeHandler(event:IndexChangeEvent):void
+			{
+			
+				var ontLvi:LightViewInstance = this.ontologyCombo.selectedItem as LightViewInstance;
+							
+				this.dispatchEvent( new ChangeFragmentTypeEvent(ontLvi.vpdmfLabel) );
+				
+			}
+			
+			protected function ontologyCombo_labelFunc(item:Object):String {
+				var lvi:LightViewInstance = LightViewInstance(item);
+				
+				if( lvi == null || lvi.vpdmfLabel == null)
+					return "";
+				
+				return lvi.vpdmfLabel; 
+			}	
+			
+			public var resizeToggle:Boolean = true;
+			protected function group1_resizeHandler(event:ResizeEvent):void
+			{
+				if(this.initialized) {
+					if(resizeToggle) { 
+						resizeToggle = false;
+						this.dispatchEvent(event);
+					} 
+				}
+			}
+			
+		]]>
+	</fx:Script>
+	
+	<s:HGroup width="100%" verticalAlign="middle">
+		
+		<s:RadioButton label="PDF" 
+					   id="pgImgButton" 
+					   group="{documentView}"/>
+		<s:RadioButton label="Text" 
+					   id="textButton" 
+					   group="{documentView}"/>
+		<s:RadioButton label="Annotations" 
+					   id="annotButton" 
+					   group="{documentView}"/>	
+		
+		<s:Label text="Frg:" />
+		
+		<s:TextInput id="frgNumberInput" text="{frgNumber}" width="25" change="frgNumberInput_changeHandler(event)"/>
+
+		<s:ComboBox id="ontologyCombo" 
+					dataProvider="{ontologies}" 
+					width="80" 
+				 	labelFunction="ontologyCombo_labelFunc"
+					change="ontologyCombo_changeHandler(event)"/>
+
+		<hc:AutoComplete id="autoComplete" 
+						 dataProvider="{ terms }" 
+						 labelField="code" 
+						 matchType="anyPart" 
+						 prompt="Select an annotation term" 
+						 width="100%" change="{ handleAutoCompleteChange() }"
+						 allowNewValues="false"  
+						 selectedItemStyleName="{ AutoComplete.STYLE_FACEBOOK }" 
+						 allowDuplicates="false"
+						 allowMultipleSelection="false"
+						 allowEditingNewValues="true" 
+						 dropDownItemRenderer="{ dropDownTermRenderer }"
+						 backspaceAction="focus"/>
+		
+		<s:Button id="dumpToBratButton" label="brat" width="60" click="dumpToBratButton_clickHandler(event)"/>
+
+	</s:HGroup>
+	
+	<s:List includeIn="showPages" 
+			id="pgList"			
+			width="100%"
+			height="100%"
+			itemRenderer="edu.isi.bmkeg.digitalLibraryModule.view.FragmenterPageRenderer"
+			dataProvider="{bitmaps}">
+		<s:layout>
+			<s:VerticalLayout gap="0" 
+							  horizontalAlign="left" 
+							  verticalAlign="top"/>
+		</s:layout>
+	</s:List>	
+	
+	<s:TextArea includeIn="showText" 
+				id="textControl" 
+				text="{allText}"
+				editable="false"
+				height="100%" 
+				width="100%"/>
+	
+	<mx:Tree folderOpenIcon="@Embed(source='/icons/node.gif')" 
+			 folderClosedIcon="@Embed(source='/icons/node.gif')" 
+			 defaultLeafIcon="@Embed(source='/icons/folder.gif')"
+			 includeIn="showFragments" 
+			 variableRowHeight="true"
+			 wordWrap="true"
+			 creationComplete="openTree();"
+			 id="frgList"
+			 width="100%"
+			 height="100%"
+			 labelField="@label"
+			 iconField="@icon"
+			 dataProvider="{xmlRoot.node}">
+	</mx:Tree>	
+	
+</s:Group>
+

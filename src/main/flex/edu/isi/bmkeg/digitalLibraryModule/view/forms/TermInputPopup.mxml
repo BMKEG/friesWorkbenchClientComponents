@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- containers\spark\myComponents\MyAlertPopUp.mxml -->
+<s:TitleWindow xmlns:fx="http://ns.adobe.com/mxml/2009" 
+						   xmlns:s="library://ns.adobe.com/flex/spark" 
+						   xmlns:view="edu.isi.bmkeg.digitalLibraryModule.view.*"
+						   xmlns:hc="com.hillelcoren.components.*"
+						   xmlns:mx="library://ns.adobe.com/flex/mx" width="200" height="100">
+	
+	<s:layout>
+		<s:VerticalLayout/>
+	</s:layout>
+
+	<fx:Script>
+		<![CDATA[
+
+			import edu.isi.bmkeg.ftd.model.FTDFragmentBlock;
+			import edu.isi.bmkeg.digitalLibrary.events.*;
+			
+			[Bindable]
+			public var frgCode:String = "-";
+
+			public var block:FTDFragmentBlock;
+			
+			protected function ok_clickHandler(event:MouseEvent):void
+			{
+				this.dispatchEvent( 
+					new ChangeFragmentCodeEvent(
+						ChangeFragmentCodeEvent.ADD_FRAGMENT_CODE,
+						block,
+						true));
+				this.dispatchEvent(new ClosePopupEvent(this));
+			}
+			
+			protected function cancel_clickHandler(event:MouseEvent):void
+			{
+				this.dispatchEvent(new ClosePopupEvent(this));
+			}
+			
+		]]>
+	</fx:Script>
+	
+	<s:Label width="100%" id="termCode" text="{frgCode}"/>
+	<s:HGroup width="100%">
+		<s:Button label="OK" click="ok_clickHandler(event)"/>
+		<s:Button label="Cancel" click="cancel_clickHandler(event)"/>
+	</s:HGroup>
+	
+</s:TitleWindow>

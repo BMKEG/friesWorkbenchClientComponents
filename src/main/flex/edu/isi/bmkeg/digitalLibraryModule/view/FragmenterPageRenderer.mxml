@@ -1,0 +1,336 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- http://blog.flexexamples.com/2009/09/29/displaying-images-in-a-spark-list-control-using-a-custom-item-renderer-in-flex-4/ -->
+<s:ItemRenderer name="FTDPageImageRenderer"
+				xmlns:fx="http://ns.adobe.com/mxml/2009"
+				xmlns:s="library://ns.adobe.com/flex/spark"
+				focusEnabled="false" 
+				creationComplete="init()" 
+				resize="itemrenderer1_resizeHandler(event)"
+				dataChange="itemrenderer1_dataChangeHandler(event)">
+	
+	<s:states>
+		<s:State name="normal" />
+	</s:states>
+	
+	<fx:Style>
+		.myFontStyle { 
+			fontSize: 15;
+			color: #9933FF;
+		}
+	</fx:Style>
+	
+	<fx:Script>
+		<![CDATA[
+			import edu.isi.bmkeg.digitalLibrary.events.*;
+			import edu.isi.bmkeg.digitalLibraryModule.model.FragmentHolderForPage;
+			import edu.isi.bmkeg.digitalLibraryModule.view.forms.TermInputPopup;
+			import edu.isi.bmkeg.ftd.model.*;
+			import edu.isi.bmkeg.ftd.rl.events.UpdateFTDFragmentEvent;
+			import edu.isi.bmkeg.utils.ColorPalette;
+			
+			import flash.display.*;
+			import flash.display.Sprite;
+			import flash.text.*;
+			
+			import mx.collections.*;
+			import mx.controls.List;
+			import mx.core.UIComponent;
+			import mx.events.FlexEvent;
+			import mx.events.ResizeEvent;
+			import mx.graphics.*;
+			import mx.managers.PopUpManager;
+			
+			import spark.components.List;
+			import spark.primitives.*;
+			
+			[Bindable]
+			private var imgHeight:int = 480;
+
+			[Bindable]
+			private var imgWidth:int = 790;
+			
+			public var colorLookup:Object = new Object;
+
+			private var ratio:Number = 1.0;
+
+			private var container:UIComponent = new UIComponent();
+			private var inProgress:Path;
+			private var extraRectangles:ArrayCollection = new ArrayCollection();
+			private var addedAnnotations:ArrayCollection = new ArrayCollection();
+
+			private var dismissControl:Sprite;
+			
+			private function init():void {
+				this.addElement( container );	
+			}
+			
+			protected function itemrenderer1_resizeHandler(event:ResizeEvent):void
+			{
+				this.imgWidth = owner.width;
+				this.imgHeight = owner.width * ratio;
+			}
+			
+			protected function image1_mouseDownHandler(event:MouseEvent):void {
+				var bitmap:Bitmap = Bitmap(data.image);
+				var sf:Number = this.height / bitmap.height;
+				this.dispatchEvent(
+					new StartFragmenting(data.page, event.localX, event.localY, sf, true) 
+				);
+			}
+			
+			protected function image1_mouseUpHandler(event:MouseEvent):void {
+				var bitmap:Bitmap = Bitmap(data.image);
+				var sf:Number = this.height / bitmap.height;
+				this.dispatchEvent(
+					new FinishFragmenting(data.page, event.localX, event.localY, sf, true) 
+				);
+			}
+
+			protected function image1_mouseMoveHandler(event:MouseEvent):void
+			{
+				var bitmap:Bitmap = Bitmap(data.image);
+				var sf:Number = this.height / bitmap.height;
+				this.dispatchEvent(
+					new TrackFragmentCursor(data.page, event.localX, event.localY, sf, true) 
+				);
+			}
+
+			/** 
+			 * Here's where we do the actual drawing of the extra rectangles and sprites.
+			 */  
+			protected function itemrenderer1_dataChangeHandler(event:FlexEvent):void
+			{
+				if( data == null || data.image == null )
+					return;
+				
+				var bitmap:Bitmap = Bitmap(data.image);
+				this.imgWidth = this.owner.width;
+				this.ratio = bitmap.height / bitmap.width;
+				this.imgHeight = this.imgWidth * ratio;
+					
+				var sf:Number = this.imgHeight / data.image.height;
+				
+				//
+				// First, clear all the stuff that's already there.
+				//
+				if( this.inProgress != null ) {
+					removeElement(this.inProgress);
+					this.inProgress = null;
+				}
+
+				for each(var r:Path in this.extraRectangles) {		
+					removeElement(r);
+				}
+				this.extraRectangles = new ArrayCollection();
+				
+				if( this.addedAnnotations!= null && this.addedAnnotations.length > 0) {
+					for each(var s:Sprite in this.addedAnnotations) {
+						this.container.removeChild(s);						
+					}
+					this.addedAnnotations = new ArrayCollection();
+				}
+				
+				if( data == null )
+					return;
+				
+				//
+				// This is the fill color of the new fragments currently being added.
+				//
+				var fillColor:uint = 0xffff00;
+				var frgPageList:spark.components.List = spark.components.List(this.owner);
+				var fragmenter:FragmenterView = FragmenterView(frgPageList.owner);
+				/*if( fragmenter.frgType != null && fragmenter.frgType.length > 0 ) {
+					fillColor = fragmenter.colorLookup[fragmenter.frgType];
+				}*/
+				var fill:SolidColor = new SolidColor(fillColor, 0.2);
+				
+				//
+				// Then get the data for this page (since this is being reused to 
+				// process each page sequentially).
+				//
+				var fh:FragmentHolderForPage = FragmentHolderForPage(data);
+				
+				if( fh.fragmentInProgress != null ) {
+					addElement( fh.fragmentInProgress );
+					this.inProgress = fh.fragmentInProgress;
+					this.inProgress.fill = fill;
+				} 
+				
+				//
+				// Actively regenerate a sprite for each fragment block 
+				// from the new data in the system.
+				//
+				var srt:Sort = new Sort();
+				srt.fields = [new SortField("vpdmfId")];
+				fh.fragmentsAdded.sort = srt;
+				fh.fragmentsAdded.refresh();
+				
+				//
+				// We count down over the added fragments to make sure the dismiss controls
+				// of one fragemtn appear in front of following fragments.
+				//
+				for( var i:int=fh.fragmentsAdded.length-1; i>=0; i-- ) {
+					var ftdAnn:FTDFragmentBlock = FTDFragmentBlock( fh.fragmentsAdded.getItemAt(i) );
+					var frg:FTDFragment = ftdAnn.fragment;
+					var blkIdx:int = -1;
+					for(var j:int=0; j<frg.annotations.length; j++) {
+						var temp:FTDFragmentBlock = FTDFragmentBlock( frg.annotations.getItemAt(j) )
+						if( temp == ftdAnn ) {
+							blkIdx = j;
+							break;
+						}	
+					}
+					
+					var tempColor:uint = 0xffff00;
+
+					if( ftdAnn.p != fh.page ) {
+						continue;
+					}
+					
+					var color:uint = lookupColor( ftdAnn.code );
+						
+					var frgSprite:FragmentSprite = new FragmentSprite( 
+						frg.frgOrder, blkIdx, ftdAnn, sf * fh.pdfScale, color);
+					this.container.addChild(frgSprite);
+					this.addedAnnotations.addItem(frgSprite);
+					frgSprite.addEventListener(MouseEvent.ROLL_OVER, onFragmentHover);
+					frgSprite.addEventListener(MouseEvent.ROLL_OUT, onFragmentOut);
+					
+				}
+				
+				//
+				// Add a path for extra stuff we want to show, like the blocking on the pdf
+				// 
+				if( fh.extraRectangles.length > 0 ) {
+					
+					var st:SolidColorStroke = new SolidColorStroke();
+					st.color = 0xff0000;	
+					st.alpha = .2;
+					
+					var sf2:Number = this.imgWidth / bitmap.width * 2.0;
+					
+					for each(var o:Object in fh.extraRectangles) {	
+						
+						var pathData:String = "m " + (o.x1*sf2) + " " + (o.y1*sf2) + " " +
+							"v " + (o.y2 - o.y1)*sf2 + " " +
+							"h " + (o.x2 - o.x1)*sf2 + " " +
+							"v " + (o.y1 - o.y2)*sf2 + " " +
+							"z";
+						var p:Path = new Path();
+						p.data = pathData;
+						p.stroke = st;
+						addElement( p );
+						this.extraRectangles.addItem(p);
+
+					}
+				
+				}
+					
+			}
+			
+			private function lookupColor(type:String):uint {
+				
+				var pageList:spark.components.List = spark.components.List(this.owner);
+				var fragmenter:FragmenterView = FragmenterView(pageList.owner);
+				var color:uint = fragmenter.colorLookup[type.toLowerCase()];
+				
+				return color;
+			
+			}
+			
+			/** 
+			 * Can we use right click menu items to clear the annotations?
+			 */  
+			public function onFragmentHover(event:MouseEvent):void {
+
+				var s:FragmentSprite = FragmentSprite(event.target);				
+				
+				s.addChild(s.dismissControl);
+				s.dismissControl.addEventListener(MouseEvent.CLICK, dismissEventListener);
+
+				s.addChild(s.addCodeControl);
+				s.addCodeControl.addEventListener(MouseEvent.CLICK, addCodeEventListener);
+
+
+			}
+
+			public function onFragmentOut(event:MouseEvent):void {
+				
+				var s:FragmentSprite = FragmentSprite(event.target);
+				s.removeChild( s.dismissControl );
+				s.removeChild( s.addCodeControl );
+
+				s.dismissControl.removeEventListener(MouseEvent.CLICK, dismissEventListener);
+				
+				s.addCodeControl.removeEventListener(MouseEvent.CLICK, addCodeEventListener);
+				
+			}
+			
+			public function dismissEventListener(event:MouseEvent):void {
+				
+				var s:Sprite = Sprite(event.target);
+				var frgSprite:FragmentSprite = FragmentSprite(s.parent);
+				var ftdAnn:FTDFragmentBlock = frgSprite.ftdAnn;
+
+				this.dispatchEvent(new RemoveAnnotationEvent(ftdAnn, true));			
+				
+				frgSprite.removeEventListener(MouseEvent.ROLL_OVER, onFragmentHover);
+				frgSprite.removeEventListener(MouseEvent.ROLL_OUT, onFragmentOut);
+				
+			}			
+
+			public function addCodeEventListener(event:MouseEvent):void {
+				
+				var s:TextField= TextField(event.target);
+				
+				var frgSprite:FragmentSprite = FragmentSprite(s.parent);
+				var ftdAnn:FTDFragmentBlock = frgSprite.ftdAnn;
+				
+				var owner:DisplayObjectContainer= this.owner;
+				
+				var frameY:Number = this.owner.transform.pixelBounds.top;
+				var frameX:Number = this.owner.transform.pixelBounds.left;
+				
+				var x:Number = s.x + frameX;
+				var y:Number = s.y + frameY;
+
+				this.dispatchEvent( new ActivateTermInputPopupEvent(ftdAnn, x, y, true)) ;
+
+			}			
+
+			public function removeCodeEventListener(event:MouseEvent):void {
+				
+				var s:Sprite = Sprite(event.target);
+				var frgSprite:FragmentSprite = FragmentSprite(s.parent);
+				var ftdAnn:FTDFragmentBlock = frgSprite.ftdAnn;
+				
+				var addEvent:ChangeFragmentCodeEvent = new ChangeFragmentCodeEvent(
+					ChangeFragmentCodeEvent.REMOVE_FRAGMENT_CODE,
+					ftdAnn,
+					true);
+				
+				this.dispatchEvent(addEvent);			
+				
+				frgSprite.removeEventListener(MouseEvent.ROLL_OVER, onFragmentHover);
+				frgSprite.removeEventListener(MouseEvent.ROLL_OUT, onFragmentOut);
+				
+			}			
+
+			
+		]]>
+	</fx:Script>
+	
+	<s:Image id="img"
+			 scaleMode="{BitmapScaleMode.LETTERBOX}" 
+			 width="{imgWidth}"   
+			 height="{imgHeight}"
+			 horizontalAlign="left"
+		  	 verticalAlign="top"
+			 smooth="true"
+			 smoothingQuality="high"
+			 source="{data.image}"
+			 mouseDown="image1_mouseDownHandler(event)"
+ 			 mouseUp="image1_mouseUpHandler(event)"
+			 mouseMove="image1_mouseMoveHandler(event)"/>
+	
+</s:ItemRenderer>

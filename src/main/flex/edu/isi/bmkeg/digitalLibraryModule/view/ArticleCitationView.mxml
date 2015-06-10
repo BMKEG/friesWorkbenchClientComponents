@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009"
+		xmlns:s="library://ns.adobe.com/flex/spark"
+		xmlns:mx="library://ns.adobe.com/flex/mx" 
+		 width="100%"
+		 height="100%">	
+	<s:layout>
+		<s:VerticalLayout gap="10" paddingBottom="20" paddingLeft="5" paddingRight="5"
+						  paddingTop="20"/>
+	</s:layout>
+
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	
+	<fx:Script>
+		<![CDATA[
+			import edu.isi.bmkeg.digitalLibrary.model.citations.*;
+			
+			import mx.collections.ArrayCollection;
+			
+			// TODO Some improvements:
+			//   - Resizable Window, resizable controls (especially TextAreas)
+			//     (see http://flexdevtips.blogspot.com/2010/06/flex-4-spark-resizable-controls.html)
+
+			private var _loadedArticle:LiteratureCitation ;
+			
+			public function get loadedArticle():LiteratureCitation 
+			{
+				return _loadedArticle;
+			}
+			
+			[Bindable]
+			public var vpdmfLabel:String;
+			
+			[Bindable]
+			public var abstract:String;
+			
+			[Bindable]
+			public var keywordsLine:String;
+						
+			[Bindable]
+			public var doi:String;
+			
+			[Bindable]
+			public var urlsLine:String;
+			
+			
+			// API Methods
+			
+			public function clearFormFields():void
+			{
+				_loadedArticle = null;
+				
+				vpdmfLabel = null;
+				abstract = null;
+				keywordsLine = null;
+				doi = null;
+				urlsLine  =null;
+			}
+			
+			
+			public function loadLiteratureCitation(article:LiteratureCitation):void {
+				
+				_loadedArticle = article;
+				
+				vpdmfLabel = article.vpdmfLabel;
+				abstract = article.abstractText;
+
+				if (article.keywordList && article.keywordList.length > 0) {
+				
+					keywordsLine = keywords2strings(article.keywordList.source).join(";");					
+				
+				} else {
+					
+					keywordsLine  =null;
+				
+				} 
+					
+				if (article.fullTextUrl && article.fullTextUrl.length > 0) {
+					
+					urlsLine = urls2strings(article.fullTextUrl.source).join(";");
+				
+				} else {
+					
+					urlsLine = null;
+				}
+				
+				doi = null;
+				if (article.ids) {
+					for each (var id:ID in article.ids) {
+						if (id.idType == "DOI") {
+							doi = id.idValue;				
+						}
+					}
+				}
+				
+			
+			}
+			
+			/**
+			 * Converts an array of Keywords into an array of Strings 
+			 */ 
+			internal static function keywords2strings(k:Array):Array {
+				
+				var s:Array =  new Array(k.length);
+				for (var i:int = 0; i < k.length; i++) {
+					s[i] = Keyword(k[i]).value;
+				}
+				return s;
+			}
+
+			/**
+			 * Converts an array of URLs into an array of Strings 
+			 */ 
+			internal static function urls2strings(u:Array):Array {
+				
+				var s:Array =  new Array(u.length);
+				for (var i:int = 0; i < u.length; i++) {
+					s[i] = URL(u[i]).url;
+				}
+			
+				return s;
+			
+			}
+			
+			/**
+			 * Converts an array of Persons into an array of Strings 
+			 */ 
+			internal static function authors2strings(a:Array):Array
+			{
+				var s:Array =  new Array(a.length);
+				for (var i:int = 0; i < a.length; i++) {
+					s[i] = Author(a[i]).initials 
+						+ " " + Author(a[i]).surname;
+				}
+
+				return s;
+			
+			}
+			
+		]]>
+	</fx:Script>
+	<s:Group width="100%">
+		<s:Label id="citationInfo" left="0" right="0" top="0" fontSize="14" fontWeight="bold"
+				 text="{vpdmfLabel}"/>		
+	</s:Group>
+	<s:Group width="100%">
+		<s:Label id="abstractLabel" top="20" left="0" right="0" fontSize="14"
+				 text="{abstract}"/>
+	</s:Group>
+</s:Group>
