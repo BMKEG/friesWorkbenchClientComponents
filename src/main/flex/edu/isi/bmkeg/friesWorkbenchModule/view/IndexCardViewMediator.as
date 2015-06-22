@@ -57,7 +57,7 @@ package edu.isi.bmkeg.friesWorkbenchModule.view
 		private function buildTreeNodeRecursively(label:String, node:Object):Object {
 				
 			var o:Object = new Object();
-			var children = new ArrayCollection();
+			var children:ArrayCollection = new ArrayCollection();
  			
 			if( node is String || node is Number || node is Boolean) {
 				

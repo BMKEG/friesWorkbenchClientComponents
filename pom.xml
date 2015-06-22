@@ -3,17 +3,17 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-  	<parent>
-	    <groupId>edu.isi.bmkeg</groupId>
-	    <artifactId>bmkeg-as-parent</artifactId>
-	    <version>1.1.5-SNAPSHOT</version>
-	    <relativePath>../bmkeg-as-parent</relativePath>
- 	</parent>
+	<parent>
+		<groupId>edu.isi.bmkeg</groupId>
+		<artifactId>bmkeg-as-parent</artifactId>
+		<version>1.1.5-SNAPSHOT</version>
+		<relativePath>../bmkeg-as-parent</relativePath>
+	</parent>
 
 	<artifactId>friesWorkbenchClientComponents</artifactId>
 	<name>FRIES Consortium Workbench Client Components</name>
 	<packaging>swc</packaging>
-	
+
 	<dependencies>
 		<dependency>
 			<groupId>com.adobe.flex.framework</groupId>
@@ -54,7 +54,7 @@
 			<version>2009.01.24</version>
 			<type>swc</type>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>org.robotlegs</groupId>
 			<type>swc</type>
@@ -67,31 +67,37 @@
 			<version>1.2</version>
 			<type>swc</type>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>edu.isi.bmkeg</groupId>
-			<artifactId>vpdmf-digitalLibrary-as-services</artifactId>
+			<artifactId>vpdmf-bigMechIndexCards-as-services</artifactId>
 			<type>swc</type>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>edu.isi.bmkeg</groupId>
-			<artifactId>vpdmf-digitalLibrary-as</artifactId>
+			<artifactId>vpdmf-bigMechIndexCards-as</artifactId>
 			<type>swc</type>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>edu.isi.bmkeg</groupId>
 			<type>swc</type>
 			<artifactId>vpdmfFlex</artifactId>
 		</dependency>
-			
+
+		<dependency>
+			<groupId>edu.isi.bmkeg</groupId>
+			<type>swc</type>
+			<artifactId>digitalLibraryClientComponents</artifactId>
+		</dependency>
 	</dependencies>
 
 	<build>
 		<pluginManagement>
 			<plugins>
-				<!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
+				<!--This plugin's configuration is used to store Eclipse m2e settings 
+					only. It has no influence on the Maven build itself. -->
 				<plugin>
 					<groupId>org.eclipse.m2e</groupId>
 					<artifactId>lifecycle-mapping</artifactId>
