@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- $Id: DesignerComponent.mxml 2500 2011-06-17 00:00:05Z tom $ 
+     $Date: 2011-06-16 17:00:05 -0700 (Thu, 16 Jun 2011) $
+     $Revision: 2500 $ -->
+<mx:Module height="100%" width="100%" 
+		   xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		   xmlns:mx="library://ns.adobe.com/flex/mx"
+		   xmlns:s="library://ns.adobe.com/flex/spark" 
+		   implements="org.robotlegs.utilities.modular.core.IModule"
+		   xmlns:digLibView="edu.isi.bmkeg.digitalLibraryModule.view.*"
+		   xmlns:view="edu.isi.bmkeg.friesWorkbenchModule.view.*"
+		   xmlns:fp="com.devaldi.controls.flexpaper.*">
+	
+	<fx:Declarations>
+
+	</fx:Declarations>
+	
+	<fx:Script>
+    <![CDATA[
+		
+		import edu.isi.bmkeg.friesWorkbenchModule.FriesWorkbenchModuleContext;
+		import edu.isi.bmkeg.digitalLibraryModule.view.FragmenterView;
+		import edu.isi.bmkeg.friesWorkbenchModule.view.IndexCardList;
+		import edu.isi.bmkeg.friesWorkbenchModule.view.IndexCardView;
+		
+		import mx.core.IVisualElementContainer;
+		import mx.events.SliderEvent;
+		
+		import org.robotlegs.core.IContext;
+		import org.robotlegs.core.IInjector;
+		import org.robotlegs.utilities.modular.core.IModule;
+		import org.robotlegs.utilities.modular.core.IModuleContext;
+		
+		import mx.controls.Alert;
+		import mx.events.PropertyChangeEvent;
+		import mx.events.PropertyChangeEventKind;
+		import mx.managers.PopUpManager;
+		import mx.rpc.events.FaultEvent;
+		
+		protected var context:IModuleContext;
+		
+		public function displayServiceFailureError(faultEvent:FaultEvent):void
+		{
+			Alert.show(faultEvent.toString(),"Service Error");
+		}
+		
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		
+		/*private function createCorpusClickHandler(event:MouseEvent):void {
+			var openEvent:UserRequestCorpusEditorEvent = 
+				new UserRequestCorpusEditorEvent(UserRequestCorpusEditorEvent.OPEN);
+			
+			dispatchEvent(openEvent);
+		}
+		
+		private function insertArticleClickHandler(event:MouseEvent):void {
+			var openEvent:UserRequestArticleEditorEvent = 
+				new UserRequestArticleEditorEvent(UserRequestArticleEditorEvent.OPEN);
+			
+			dispatchEvent(openEvent);
+		}*/
+		
+		/**
+		 * We need to initialize our context by setting the parent
+		 * injector for the module. This is actually injected by the
+		 * shell, so no need to worry about it!
+		 */
+		[Inject]
+		public function set parentInjector(value:IInjector):void
+		{
+			context = new FriesWorkbenchModuleContext(this, value);
+		}
+		
+		public function dispose():void
+		{
+			if(parent && parent.contains(this))
+				IVisualElementContainer(parent).removeElement(this);
+			context.dispose();
+			context = null;    
+		}	
+		
+    ]]>
+	</fx:Script>
+
+	<mx:HDividedBox top="10" width="100%" height="100%">	
+
+		<s:Panel width="100%" height="100%" 
+				 title="Evidence"
+				 skinClass="edu.isi.bmkeg.friesWorkbenchModule.FriesWorkbenchModuleSkin">
+			<s:layout>
+				<s:VerticalLayout/>
+			</s:layout>
+			<digLibView:FragmenterView id="fragmenter" width="100%" height="100%"/>									
+		</s:Panel>
+		
+		<s:Panel width="100%" height="100%" 
+				 title="Index Cards"
+				 skinClass="edu.isi.bmkeg.friesWorkbenchModule.FriesWorkbenchModuleSkin">
+			<s:layout>
+				<s:VerticalLayout/>
+			</s:layout>
+			<view:IndexCardList id="indexCardList" 
+								width="100%" height="100%"/>
+			<view:IndexCardView width="100%" height="100%"/>									
+		</s:Panel>
+		
+	
+	</mx:HDividedBox>
+	
+</mx:Module>

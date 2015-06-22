@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		 xmlns:s="library://ns.adobe.com/flex/spark" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx" 
+		 initialize="init()"
+		 width="1000" height="300">
+	<s:layout>
+		<s:VerticalLayout/>
+	</s:layout>
+	<fx:Declarations>
+	</fx:Declarations>
+	
+	<fx:Script>
+		<![CDATA[
+			import edu.isi.bmkeg.digitalLibrary.model.qo.citations.*;
+			import edu.isi.bmkeg.bigMechIndexCards.model.qo.*
+			import edu.isi.bmkeg.bigMechIndexCards.rl.events.*;
+			import edu.isi.bmkeg.friesWorkbenchModule.events.*;
+			
+			import mx.collections.ArrayCollection;
+			import mx.collections.errors.ItemPendingError;
+			
+			import spark.events.GridSelectionEvent;
+			import spark.events.GridSortEvent;
+			
+			[Bindable]
+			public var listLength:int;
+			
+			[Bindable]
+			public var indexCards:ArrayCollection = new ArrayCollection();
+			
+			public function get selectedIndex():int
+			{
+				return indexCardListDataGrid.selectedIndex;
+			}
+			
+			public function set selectedIndex(v:int):void 
+			{
+				indexCardListDataGrid.setSelectedIndex(v);
+			}
+			
+			public function init():void 
+			{
+				indexCardListDataGrid.addEventListener(KeyboardEvent.KEY_UP, keyHandler);
+			}
+			
+			private function keyHandler(event:KeyboardEvent):void 
+			{
+				
+				// left cursor towards 'in'
+				if( event.keyCode == 37 || event.keyCode == 187 ) {
+					dispatchEvent( new SwitchInOutEvent(SwitchInOutEvent.IN) );
+				} 
+					// right cursor towards 'out'
+				else if(event.keyCode == 39 || event.keyCode == 189) {
+					dispatchEvent( new SwitchInOutEvent(SwitchInOutEvent.OUT) );					
+				}
+					// delete key towards 'unclassified'
+				else if(event.keyCode == 8 || event.keyCode == 46) {
+					dispatchEvent( new SwitchInOutEvent(SwitchInOutEvent.UNCLASSIFIED) );					
+				}
+			}
+			
+			public function clearSelection():void {
+				
+				indexCardListDataGrid.clearSelection();
+				
+			}
+			
+			private function popupFormatter(item:Object, column:GridColumn):String {
+				
+				return item.citation;
+				
+			}
+			
+			private function selectionChangeHandler(event:GridSelectionEvent):void {
+					
+				var o:Object = indexCardListDataGrid.selectedItem;	
+				var id:Number = Number(o.id); 
+				
+				dispatchEvent(new FindBigMechIndexCardByIdEvent(id));
+				
+			}
+			
+			private function createPendingItem(index:int, ipe:ItemPendingError):Object {
+				return {citation: "..."};        
+			}
+
+			public function inOutLabelFunction(item:Object, column:GridColumn):String {
+				var cName:String = column.headerText;
+				return item[cName + ".inOut"];
+			}
+			
+		]]>
+	</fx:Script>
+	<s:DataGrid id="indexCardListDataGrid" width="100%" height="100%" 
+				dataProvider="{indexCards}"
+				selectionChange="selectionChangeHandler(event)"
+				resizableColumns="false"
+				sortableColumns="false">
+		<s:columns>
+			<s:ArrayList>
+				<s:GridColumn headerText="File Id"  
+							  dataField="pmc"
+							  dataTipFunction="popupFormatter"
+							  showDataTips="true"
+							  width="100"/>
+				<s:GridColumn headerText="Status" 
+							  dataField="code"
+							  dataTipFunction="popupFormatter"
+							  showDataTips="true"/>
+
+			</s:ArrayList>
+		</s:columns>
+	</s:DataGrid>
+	<s:Label top="10" fontSize="12" horizontalCenter="0"  
+			 text="{listLength} Articles in Triage Corpus."/>
+</s:Group>

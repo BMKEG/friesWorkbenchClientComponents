@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:GridItemRenderer xmlns:fx="http://ns.adobe.com/mxml/2009" 
+					xmlns:s="library://ns.adobe.com/flex/spark" 
+					xmlns:mx="library://ns.adobe.com/flex/mx"
+					width="100%" height="100%">
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	<s:layout>
+		<s:HorizontalLayout paddingLeft="2" paddingRight="2" 
+							paddingTop="2" paddingBottom="2"/>
+	</s:layout>
+
+	
+	<fx:Script>
+		<![CDATA[			
+			import edu.isi.bmkeg.friesWorkbenchModule.events.*;
+			
+			import flash.display.Sprite;
+			
+			import mx.core.UIComponent;
+			import mx.graphics.*;
+			
+			import spark.events.DropDownEvent;
+			import spark.primitives.*;
+			
+			private var uiC:UIComponent;
+			private var s:Sprite;			
+			
+			[Bindable]
+			public var code:String = "";
+			
+			[Bindable]
+			public var spacerWidth:Number;
+
+			override public function set data(value:Object):void { 
+				
+				super.data = value; 
+				
+				if( inOutControl == null )
+					return;
+				
+				var cName:String = this.column.headerText;
+				var score:Number = data[cName + ".score"];
+
+				if( uiC == null ) {
+					uiC = new UIComponent();
+					var h:int = inOutControl.height - 4;
+					uiC.width = h+2;
+					uiC.height = h+2;	
+					addElementAt(uiC,0);
+					s = new Sprite();
+					s.graphics.clear();
+					uiC.addChild(s);
+				} 
+
+				if( data[column.dataField] == null ) {
+
+					this.code = "";
+					this.inOutControl.visible = false;
+					
+				} else if( data[column.dataField] == "unclassified" ) {
+
+					this.code = "?";
+					this.inOutControl.visible = true;
+					
+				} else if( data[column.dataField] == "in" ) {
+					
+					this.code = "+";
+					this.inOutControl.visible = true;
+					
+				} else if( data[column.dataField] == "out" ) {
+					
+					this.code = "-"
+					this.inOutControl.visible = true;
+
+				} 
+				
+				if( !isNaN(score) && score != -1 ) {
+		
+					var hh:Number = 22;
+					uiC.width = hh+2;
+					uiC.height = hh+2;		
+					
+					uiC.toolTip = score + "";
+					
+					s.graphics.clear();
+					s.graphics.moveTo(0,0);
+					s.graphics.beginFill(0x058C24);
+					s.graphics.lineStyle(1, 0x000000, 0.0);
+					s.graphics.drawRect( 1.0, hh * (1.0-score), hh/2.0, hh * score );
+					s.graphics.endFill();
+					
+				} else {
+
+					s.graphics.clear();
+					uiC.toolTip = "";
+				
+				}
+				
+			} 
+			
+			protected function dropdownlist1_closeHandler(event:DropDownEvent):void {
+				
+				var list:DropDownList = DropDownList(event.currentTarget);
+				var val:String = list.selectedItem;
+				
+				var existingValue:String = data[column.dataField];
+				
+				if( existingValue == val )
+					return;
+				
+				if( val == SwitchInOutEvent.IN ) {
+					
+					dispatchEvent( new SwitchInOutEvent(
+						SwitchInOutEvent.IN, true, false) );					
+					
+				} else if( val == SwitchInOutEvent.OUT ) {
+					
+					dispatchEvent( new SwitchInOutEvent(
+						SwitchInOutEvent.OUT, true, false) );					
+					
+				} else if( val == SwitchInOutEvent.UNCLASSIFIED ) {
+					
+					dispatchEvent( new SwitchInOutEvent(
+						SwitchInOutEvent.UNCLASSIFIED, true, false) );					
+					
+				} 
+				
+			}
+			
+			
+			
+		]]>
+	</fx:Script>
+	
+	<s:Spacer width="100%" minWidth="1"/>
+		
+	<s:DropDownList id="inOutControl"
+					chromeColor="white"
+					width="45" height="100%" 
+				 	selectedItem="{code}" 
+					close="dropdownlist1_closeHandler(event)" >
+		<mx:ArrayCollection>
+			<fx:String>+</fx:String>
+			<fx:String>-</fx:String>
+			<fx:String>?</fx:String>
+		</mx:ArrayCollection>
+	</s:DropDownList>
+	
+</s:GridItemRenderer>
